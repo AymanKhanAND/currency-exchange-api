@@ -10,6 +10,9 @@ import (
 	"strconv"
 )
 
+const getRequestErrorMsg = "error getting response"
+const responseReadErrorMsg = "error reading the body"
+
 type Response struct {
 	Success bool 				`json:"success"`
 	Query 	Query 				`json:"query"`
@@ -27,7 +30,7 @@ type Query struct {
 func HandleGetResponse(r *http.Response) (float64, error) {
 	responseData, err := io.ReadAll(r.Body)
 	if err != nil {
-		return 0, errors.New("error reading the body")
+		return 0, errors.New(responseReadErrorMsg)
 	}
 
 	var responseObject Response
@@ -43,7 +46,7 @@ func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) 
 	response, err := http.Get(url)
 
 	if err != nil {
-		return 0, errors.New("error getting response")
+		return 0, errors.New(getRequestErrorMsg)
 	}
 
 	return HandleGetResponse(response)
@@ -63,7 +66,12 @@ func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
 
 	numericAmount, _ := strconv.ParseFloat(amount, 64)
 
-	converted, _ := ExchangeGetRequest(numericAmount, from, to, date)
+	converted, err := ExchangeGetRequest(numericAmount, from, to, date)
+
+	if err != nil && err.Error() == getRequestErrorMsg {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	fmt.Fprint(w, converted)
 }

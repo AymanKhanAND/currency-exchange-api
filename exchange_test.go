@@ -33,11 +33,10 @@ func TestExchange(t *testing.T) {
 	})
 
 	t.Run("error with GET", func(t *testing.T) {
-		_, err := ExchangeGetRequest(400, "mal formed", "test", "test")
-		want := "error getting response"
+		_, err := ExchangeGetRequest(1, "mal formed", "test", "test")
 
 		assertErrorPresent(t, err)
-		assertErrorMessage(t, err.Error(), want)
+		assertErrorMessage(t, err.Error(), getRequestErrorMsg)
 	})
 
 	t.Run("successful conversion through http handler", func(t *testing.T) {
@@ -52,20 +51,32 @@ func TestExchange(t *testing.T) {
 		assertStatus(t, response.Code, 200)
 	})
 
-	t.Run("bad request for malformed query params", func(t *testing.T) {
-		request, _ := http.NewRequest(http.MethodGet, "/convert?from=USD&to=GBP&amount=200", nil)
-		response := httptest.NewRecorder()
 
-		ExchangeHandler(response, request)
+	t.Run("errors with query params", func(t *testing.T) {
+		tests := map[string]struct{
+			url string
+		}{
+			"missing params": {"/convert?from=USD&to=GBP&amount=200"},
+			"malformed params": {"/convert?from=US D&to=G BP&amount=200&date=2023-06-08"},
+		}
 
-		assertStatus(t, response.Code, 400)
+		for name, tc := range tests {
+			t.Run(name, func(t *testing.T) {
+				request, _ := http.NewRequest(http.MethodGet, tc.url, nil)
+				response := httptest.NewRecorder()
+	
+				ExchangeHandler(response, request)
+	
+				assertStatus(t, response.Code, 400)
+			})
+		}
 	})
 }
 
 func assertConversion(t testing.TB, got, want float64) {
 	t.Helper()
 	if got != want {
-		t.Errorf("got %f, want %f", got, want)
+		t.Errorf(" comgot %f, want %f", got, want)
 	}
 }
 
