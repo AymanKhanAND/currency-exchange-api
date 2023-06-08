@@ -18,7 +18,11 @@ func TestExchange(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := Exchange(tc.amount, tc.from, tc.to, tc.date)
+			got, err := Exchange(tc.amount, tc.from, tc.to, tc.date)
+
+			if err != nil {
+				t.Error("got error where there shouldn't be")
+			}
 
 			if got != tc.want {
 				t.Errorf("got %f, want %f", got, tc.want)
@@ -26,3 +30,6 @@ func TestExchange(t *testing.T) {
 		})
 	}
 }
+
+
+// Test errors that occur

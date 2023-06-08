@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 )
 
 type Response struct {
@@ -23,24 +21,23 @@ type Query struct {
 	Amount 	float64 `json:"amount"`
 }
 
-func Exchange(amount float64, from, to, date string) float64 {
+func Exchange(amount float64, from, to, date string) (float64, error) {
 	
 	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s&amount=%f&date=%s", from, to, amount, date)
 	
 	response, err := http.Get(url)
 
 	if err != nil {
-		fmt.Print(err.Error())
-		os.Exit(1)
+		return 0, err
 	}
 
 	responseData, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
 	var responseObject Response
 	json.Unmarshal(responseData, &responseObject)
 
-	return responseObject.Result
+	return responseObject.Result, nil
 }
