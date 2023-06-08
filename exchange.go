@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type Response struct {
@@ -45,4 +47,28 @@ func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) 
 	}
 
 	return HandleGetResponse(response)
+}
+
+func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
+
+	amount := r.URL.Query().Get("amount")
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+	date := r.URL.Query().Get("date")
+
+	if amount == "" || from == "" || to == "" || date == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	numericAmount, _ := strconv.ParseFloat(amount, 64)
+
+	converted, _ := ExchangeGetRequest(numericAmount, from, to, date)
+
+	fmt.Fprint(w, converted)
+}
+
+func main() {
+	handler := http.HandlerFunc(ExchangeHandler)
+	log.Fatal(http.ListenAndServe(":5000", handler))
 }
