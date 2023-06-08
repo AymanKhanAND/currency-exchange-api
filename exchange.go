@@ -23,8 +23,10 @@ type Query struct {
 	Amount 	float64 `json:"amount"`
 }
 
-func Exchange(from, to string) float64 {
-	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s", from, to)
+func Exchange(amount float64, from, to, date string) float64 {
+	
+	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s&amount=%f&date=%s", from, to, amount, date)
+	
 	response, err := http.Get(url)
 
 	if err != nil {
