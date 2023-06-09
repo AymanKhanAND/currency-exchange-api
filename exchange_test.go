@@ -17,7 +17,7 @@ func TestExchange(t *testing.T) {
 			date string
 			want float64		
 		}{
-			"USD to GBP": {amount: 530, from: "USD", to: "GBP", date: "2023-06-08", want: 425.448008},
+			"USD to GBP": {amount: 530, from: "USD", to: "GBP", date: "2023-06-01", want: 422.669218},
 			"GBP to USD": {amount: 342, from: "GBP", to: "USD", date: "2023-06-01", want: 428.845991},
 			"invalid but well-formed returns 0": {amount: 100, from: "invalid", to: "invalid", date: "invalid", want: 0},
 		}
@@ -40,14 +40,14 @@ func TestExchange(t *testing.T) {
 	})
 
 	t.Run("successful conversion through http handler", func(t *testing.T) {
-		request, _ := http.NewRequest(http.MethodGet, "/convert?from=USD&to=GBP&amount=200&date=2023-06-08", nil)
+		request, _ := http.NewRequest(http.MethodGet, "/convert?from=USD&to=GBP&amount=200&date=2023-06-01", nil)
 		response := httptest.NewRecorder()
 
 		ExchangeHandler(response, request)
 
 		got, _ := strconv.ParseFloat(response.Body.String(), 64)
 
-		assertConversion(t, got, 160.546418)
+		assertConversion(t, got, 159.497818)
 		assertStatus(t, response.Code, 200)
 	})
 
@@ -58,6 +58,7 @@ func TestExchange(t *testing.T) {
 		}{
 			"missing params": {"/convert?from=USD&to=GBP&amount=200"},
 			"malformed params": {"/convert?from=US D&to=G BP&amount=200&date=2023-06-08"},
+			"non number for amount": {"/convert?from=USD&to=GBP&amount=test&date=2023-06-08"},
 		}
 
 		for name, tc := range tests {
@@ -76,7 +77,7 @@ func TestExchange(t *testing.T) {
 func assertConversion(t testing.TB, got, want float64) {
 	t.Helper()
 	if got != want {
-		t.Errorf(" comgot %f, want %f", got, want)
+		t.Errorf("got %f, want %f", got, want)
 	}
 }
 

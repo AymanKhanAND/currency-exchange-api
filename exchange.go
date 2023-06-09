@@ -27,8 +27,16 @@ type Query struct {
 	Amount 	float64 `json:"amount"`
 }
 
-func HandleGetResponse(r *http.Response) (float64, error) {
-	responseData, err := io.ReadAll(r.Body)
+func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) {
+	
+	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s&amount=%f&date=%s", from, to, amount, date)
+	
+	response, err := http.Get(url)
+	if err != nil {
+		return 0, errors.New(getRequestErrorMsg)
+	}
+
+	responseData, err := io.ReadAll(response.Body)
 	if err != nil {
 		return 0, errors.New(responseReadErrorMsg)
 	}
@@ -37,19 +45,6 @@ func HandleGetResponse(r *http.Response) (float64, error) {
 	json.Unmarshal(responseData, &responseObject)
 
 	return responseObject.Result, nil
-}
-
-func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) {
-	
-	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s&amount=%f&date=%s", from, to, amount, date)
-	
-	response, err := http.Get(url)
-
-	if err != nil {
-		return 0, errors.New(getRequestErrorMsg)
-	}
-
-	return HandleGetResponse(response)
 }
 
 func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,11 +59,14 @@ func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	numericAmount, _ := strconv.ParseFloat(amount, 64)
+	numericAmount, err := strconv.ParseFloat(amount, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	converted, err := ExchangeGetRequest(numericAmount, from, to, date)
-
-	if err != nil && err.Error() == getRequestErrorMsg {
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -80,3 +78,5 @@ func main() {
 	handler := http.HandlerFunc(ExchangeHandler)
 	log.Fatal(http.ListenAndServe(":5000", handler))
 }
+
+// TODO: DEPLOY TO SST, WRITE TESTS FIRST, SAME STYLE AS USUAL BUT WITH AWS STUFF INSTEAD
