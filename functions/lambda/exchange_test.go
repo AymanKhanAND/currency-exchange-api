@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExchange(t *testing.T) {
@@ -25,8 +26,8 @@ func TestExchange(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				got, err := ExchangeGetRequest(tc.amount, tc.from, tc.to, tc.date)
 	
-				assertErrorNotPresent(t, err)
-				assertConversion(t, got, tc.want)
+				assert.Equal(t, got, tc.want, "they should be equal")
+				assert.Nil(t, err, "not expecting an error but got one")
 			})
 		}
 	})
@@ -34,8 +35,8 @@ func TestExchange(t *testing.T) {
 	t.Run("error with GET", func(t *testing.T) {
 		_, err := ExchangeGetRequest(1, "mal formed", "test", "test")
 
-		assertErrorPresent(t, err)
-		assertErrorMessage(t, err.Error(), getRequestErrorMsg)
+		assert.NotNil(t, err, "expecting an error but didn't get one")
+		assert.Equal(t, err.Error(), getRequestErrorMsg)
 	})
 
 	t.Run("successful conversion through api gateway", func(t *testing.T) {
@@ -55,8 +56,9 @@ func TestExchange(t *testing.T) {
 		if got.Body != want {
 			t.Errorf("got %s want %s", got.Body, want)
 		}
-		assertStatus(t, got.StatusCode, 200)
-		assertErrorNotPresent(t, err)
+
+		assert.Equal(t, got.StatusCode, 200, "they should be equal")
+		assert.Nil(t, err, "not expecting an error but got one")
 	})
 
 
@@ -83,43 +85,9 @@ func TestExchange(t *testing.T) {
 
 				got, err := Handler(request)
 	
-				assertStatus(t, got.StatusCode, 400)
-				assertErrorNotPresent(t, err)
+				assert.Equal(t, got.StatusCode, 400, "they should be equal")
+				assert.Nil(t, err, "not expecting an error but got one")
 			})
 		}
 	})
-}
-
-func assertConversion(t testing.TB, got, want float64) {
-	t.Helper()
-	if got != want {
-		t.Errorf("got %f, want %f", got, want)
-	}
-}
-
-func assertStatus(t testing.TB, got, want int) {
-	t.Helper()
-	if got != want {
-		t.Errorf("did not get correct status, got %d, want %d", got, want)
-	}
-}
-
-func assertErrorMessage(t testing.TB, got, want string) {
-	t.Helper()
-	if got != want {
-		t.Errorf("got %s, want %s", got, want)
-	}
-}
-
-func assertErrorPresent(t testing.TB, err error) {
-	t.Helper()
-	if err == nil {
-		t.Fatal("was expecting error and didn't get one")
-	}
-}
-
-func assertErrorNotPresent(t testing.TB, err error) {
-	if err != nil {
-		t.Fatal("got error where there shouldn't be")
-	}
 }
