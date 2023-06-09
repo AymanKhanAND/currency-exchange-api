@@ -1,10 +1,9 @@
 package main
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"strconv"
 	"testing"
+
+	"github.com/aws/aws-lambda-go/events"
 )
 
 func TestExchange(t *testing.T) {
@@ -39,36 +38,53 @@ func TestExchange(t *testing.T) {
 		assertErrorMessage(t, err.Error(), getRequestErrorMsg)
 	})
 
-	t.Run("successful conversion through http handler", func(t *testing.T) {
-		request, _ := http.NewRequest(http.MethodGet, "/convert?from=USD&to=GBP&amount=200&date=2023-06-01", nil)
-		response := httptest.NewRecorder()
+	t.Run("successful conversion through api gateway", func(t *testing.T) {
+		request := events.APIGatewayV2HTTPRequest{
+			QueryStringParameters: map[string]string{
+				"from": "USD",
+				"to": "GBP",
+				"date": "2023-06-01",
+				"amount": "200",
+			},
+		}
 
-		ExchangeHandler(response, request)
+		want := "159.497818"
 
-		got, _ := strconv.ParseFloat(response.Body.String(), 64)
+		got, err := Handler(request)
 
-		assertConversion(t, got, 159.497818)
-		assertStatus(t, response.Code, 200)
+		if got.Body != want {
+			t.Errorf("got %s want %s", got.Body, want)
+		}
+		assertStatus(t, got.StatusCode, 200)
+		assertErrorNotPresent(t, err)
 	})
 
 
 	t.Run("errors with query params", func(t *testing.T) {
 		tests := map[string]struct{
-			url string
+			from, to, date, amount string
 		}{
-			"missing params": {"/convert?from=USD&to=GBP&amount=200"},
-			"malformed params": {"/convert?from=US D&to=G BP&amount=200&date=2023-06-08"},
-			"non number for amount": {"/convert?from=USD&to=GBP&amount=test&date=2023-06-08"},
+			"missing params": {"USD", "GBP", "", "200"},
+			"malformed params": {"US D", "G BP", "2023-06-08", "200"},
+			"non number for amount": {"USD", "GBP", "2023-01-01", "notanumber"},
 		}
 
 		for name, tc := range tests {
 			t.Run(name, func(t *testing.T) {
-				request, _ := http.NewRequest(http.MethodGet, tc.url, nil)
-				response := httptest.NewRecorder()
 	
-				ExchangeHandler(response, request)
+				request := events.APIGatewayV2HTTPRequest{
+					QueryStringParameters: map[string]string{
+						"from": tc.from,
+						"to": tc.to,
+						"date": tc.date,
+						"amount": tc.amount,
+					},
+				}
+
+				got, err := Handler(request)
 	
-				assertStatus(t, response.Code, 400)
+				assertStatus(t, got.StatusCode, 400)
+				assertErrorPresent(t, err)
 			})
 		}
 	})
