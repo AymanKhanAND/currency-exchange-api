@@ -84,7 +84,7 @@ func TestExchange(t *testing.T) {
 				got, err := Handler(request)
 	
 				assertStatus(t, got.StatusCode, 400)
-				assertErrorPresent(t, err)
+				assertErrorNotPresent(t, err)
 			})
 		}
 	})

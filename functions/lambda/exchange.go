@@ -49,33 +49,6 @@ func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) 
 	return responseObject.Result, nil
 }
 
-// func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
-
-// 	amount := r.URL.Query().Get("amount")
-// 	from := r.URL.Query().Get("from")
-// 	to := r.URL.Query().Get("to")
-// 	date := r.URL.Query().Get("date")
-
-// 	if amount == "" || from == "" || to == "" || date == "" {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	numericAmount, err := strconv.ParseFloat(amount, 64)
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	converted, err := ExchangeGetRequest(numericAmount, from, to, date)
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	fmt.Fprint(w, converted)
-// }
-
 func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 
 	amount := request.QueryStringParameters["amount"]
@@ -101,7 +74,7 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 	converted, err := ExchangeGetRequest(numericAmount, from, to, date)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
-			Body:       "Error: An error occurred with the request.",
+			Body:       err.Error(),
 			StatusCode: 400,
 		}, nil
 	}
