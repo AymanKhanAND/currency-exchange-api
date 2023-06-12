@@ -17,25 +17,30 @@ const responseReadErrorMsg = "error reading the body"
 const missingParamsErrorMsg = "error getting query parameters"
 const floatConversionErrorMsg = "error converting given amount to float"
 
-
 type Response struct {
-	Success bool 				`json:"success"`
-	Query 	Query 				`json:"query"`
-	Info 	map[string]float64 	`json:"info"`
-	Date 	string 				`json:"date"`
-	Result 	float64 			`json:"result"`
+	Success bool               `json:"success"`
+	Query   Query              `json:"query"`
+	Info    map[string]float64 `json:"info"`
+	Date    string             `json:"date"`
+	Result  float64            `json:"result"`
 }
 
 type Query struct {
-	From 	string 	`json:"from"`
-	To 		string 	`json:"to"`
-	Amount 	float64 `json:"amount"`
+	From   string  `json:"from"`
+	To     string  `json:"to"`
+	Amount float64 `json:"amount"`
 }
 
-func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) {
-	
+type externalService interface {
+	exchangeGetRequest(amount float64, from, to, date string) (float64, error)
+}
+
+type externalAPI struct{}
+
+func (e externalAPI) exchangeGetRequest(amount float64, from, to, date string) (float64, error) {
+
 	url := fmt.Sprintf("https://api.exchangerate.host/convert?from=%s&to=%s&amount=%f&date=%s", from, to, amount, date)
-	
+
 	response, err := http.Get(url)
 	if err != nil {
 		return 0, errors.New(getRequestErrorMsg)
@@ -52,7 +57,11 @@ func ExchangeGetRequest(amount float64, from, to, date string) (float64, error) 
 	return responseObject.Result, nil
 }
 
-func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
+type dependencies struct {
+	externalService externalService
+}
+
+func (d *dependencies) Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 
 	amount := request.QueryStringParameters["amount"]
 	from := request.QueryStringParameters["from"]
@@ -74,7 +83,7 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 		}, nil
 	}
 
-	converted, err := ExchangeGetRequest(numericAmount, from, to, date)
+	converted, err := d.externalService.exchangeGetRequest(numericAmount, from, to, date)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			Body:       err.Error(),
@@ -90,5 +99,10 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 }
 
 func main() {
-	lambda.Start(Handler)
+
+	d := &dependencies{
+		externalService: externalAPI{},
+	}
+
+	lambda.Start(d.Handler)
 }
