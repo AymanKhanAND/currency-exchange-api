@@ -38,56 +38,36 @@ func TestExchange(t *testing.T) {
 		assert.NotNil(t, err, "expecting an error but didn't get one")
 		assert.Equal(t, err.Error(), getRequestErrorMsg)
 	})
+}
 
-	t.Run("successful conversion through api gateway", func(t *testing.T) {
-		request := events.APIGatewayV2HTTPRequest{
-			QueryStringParameters: map[string]string{
-				"from": "USD",
-				"to": "GBP",
-				"date": "2023-06-01",
-				"amount": "200",
-			},
-		}
+func TestHandler(t *testing.T) {
+	tests := map[string]struct{
+		from, to, date, amount, wantBody string
+		wantCode int
+	}{
+		"successful conversion": {"USD", "GBP", "2023-06-01", "200", "159.497818", 200},
+		"missing params": {"USD", "GBP", "", "200", missingParamsErrorMsg, 400},
+		"malformed params": {"US D", "G BP", "2023-06-08", "200", getRequestErrorMsg, 400},
+		"non number for amount": {"USD", "GBP", "2023-01-01", "notanumber", floatConversionErrorMsg, 400},
+	}
 
-		want := "159.497818"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-		got, err := Handler(request)
+			request := events.APIGatewayV2HTTPRequest{
+				QueryStringParameters: map[string]string{
+					"from": tc.from,
+					"to": tc.to,
+					"date": tc.date,
+					"amount": tc.amount,
+				},
+			}
 
-		if got.Body != want {
-			t.Errorf("got %s want %s", got.Body, want)
-		}
+			got, err := Handler(request)
 
-		assert.Equal(t, got.StatusCode, 200, "they should be equal")
-		assert.Nil(t, err, "not expecting an error but got one")
-	})
-
-
-	t.Run("errors with query params", func(t *testing.T) {
-		tests := map[string]struct{
-			from, to, date, amount string
-		}{
-			"missing params": {"USD", "GBP", "", "200"},
-			"malformed params": {"US D", "G BP", "2023-06-08", "200"},
-			"non number for amount": {"USD", "GBP", "2023-01-01", "notanumber"},
-		}
-
-		for name, tc := range tests {
-			t.Run(name, func(t *testing.T) {
-	
-				request := events.APIGatewayV2HTTPRequest{
-					QueryStringParameters: map[string]string{
-						"from": tc.from,
-						"to": tc.to,
-						"date": tc.date,
-						"amount": tc.amount,
-					},
-				}
-
-				got, err := Handler(request)
-	
-				assert.Equal(t, got.StatusCode, 400, "they should be equal")
-				assert.Nil(t, err, "not expecting an error but got one")
-			})
-		}
-	})
+			assert.Equal(t, got.Body, tc.wantBody, "they should be equal")
+			assert.Equal(t, got.StatusCode, tc.wantCode, "they should be equal")
+			assert.Nil(t, err, "not expecting an error but got one")
+		})
+	}
 }

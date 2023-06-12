@@ -14,6 +14,9 @@ import (
 
 const getRequestErrorMsg = "error getting response"
 const responseReadErrorMsg = "error reading the body"
+const missingParamsErrorMsg = "error getting query parameters"
+const floatConversionErrorMsg = "error converting given amount to float"
+
 
 type Response struct {
 	Success bool 				`json:"success"`
@@ -58,7 +61,7 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 
 	if amount == "" || from == "" || to == "" || date == "" {
 		return events.APIGatewayProxyResponse{
-			Body:       "Error: Missing required query parameters.",
+			Body:       missingParamsErrorMsg,
 			StatusCode: 400,
 		}, nil
 	}
@@ -66,7 +69,7 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 	numericAmount, err := strconv.ParseFloat(amount, 64)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
-			Body:       "Error: Non-numeric value given for amount.",
+			Body:       floatConversionErrorMsg,
 			StatusCode: 400,
 		}, nil
 	}
@@ -78,7 +81,6 @@ func Handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResp
 			StatusCode: 400,
 		}, nil
 	}
-
 
 	textConverted := fmt.Sprintf("%f", converted)
 	return events.APIGatewayProxyResponse{
